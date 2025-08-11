@@ -1,0 +1,13 @@
+# Ignore generated output files
+output/*.xml
+output/*.json
+
+# Ignore temporary files
+temp/*
+
+# Keep the directories
+!output/.gitkeep
+!temp/.gitkeep
+
+# Ignore large PDF files (optional - remove if you want to track PDFs)
+# input/*.pdf

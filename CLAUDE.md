@@ -128,3 +128,4 @@ When extending the converter, ensure compliance with the Akoma Ntoso schema whil
 2. **Multilingual Support**: Handle documents in Hindi and regional languages
 3. **Diff Viewer**: Compare different versions of acts
 4. **Database Export**: Export to database format for legal information systems
+- Use uv for managing depenencies and Project. Also use Powershell for everything
