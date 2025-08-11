@@ -1,0 +1,15 @@
+[project]
+name = "legal2akn"
+version = "0.1.0"
+description = "Convert legal documents to Akoma Ntoso XML format"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "lxml>=5.0.0",
+    "click>=8.1.0",
+    "pydantic>=2.0.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+legal2akn = "legal2akn.cli:main"
