@@ -2,7 +2,7 @@
 
 import re
 from typing import List, Optional, Tuple
-from .models import LegalDocument, Chapter, Article, Section, DocumentMetadata
+from .models import LegalDocument, Part, Chapter, Article, Section, DocumentMetadata
 
 
 class DocumentParser:
@@ -11,8 +11,10 @@ class DocumentParser:
     def __init__(self):
         """Initialize the parser with regex patterns."""
         # Common patterns for legal document structure
+        # Parts pattern for Constitution (e.g., PART I, PART XIX-A)
+        self.part_pattern = re.compile(r'^PART\s+([IVXLCDM]+(?:-[A-Z])?)\s*[–—-]?\s*(.*)$', re.IGNORECASE | re.MULTILINE)
         self.chapter_pattern = re.compile(r'^CHAPTER\s+(\d+|[IVXLCDM]+)\.?\s*[-:]?\s*(.*)$', re.IGNORECASE | re.MULTILINE)
-        self.article_pattern = re.compile(r'^(?:Article|Art\.?)\s+(\d+|[IVXLCDM]+)\.?\s*[-:]?\s*(.*)$', re.IGNORECASE | re.MULTILINE)
+        self.article_pattern = re.compile(r'^(?:Article|Art\.?)\s+(\d+[A-Z]?)\.?\s*[-:]?\s*(.*)$', re.IGNORECASE | re.MULTILINE)
         self.section_pattern = re.compile(r'^(?:Section|Sec\.?|§)\s+(\d+(?:\.\d+)*)\s*[-:]?\s*(.*)$', re.IGNORECASE | re.MULTILINE)
         self.subsection_pattern = re.compile(r'^\s*\(([a-z]|\d+)\)\s+(.*)$', re.MULTILINE)
     
@@ -38,6 +40,13 @@ class DocumentParser:
             document.preamble = text[:preamble_end].strip()
             text = text[preamble_end:]
         
+        # Check if this is a Constitution document (has Parts)
+        if metadata and metadata.document_type.lower() == 'constitution':
+            parts = self._extract_parts(text)
+            if parts:
+                document.parts = parts
+                return document
+        
         # Check for chapters
         chapters = self._extract_chapters(text)
         if chapters:
@@ -57,12 +66,39 @@ class DocumentParser:
         """Find the position of the first structural element."""
         positions = []
         
-        for pattern in [self.chapter_pattern, self.article_pattern, self.section_pattern]:
+        for pattern in [self.part_pattern, self.chapter_pattern, self.article_pattern, self.section_pattern]:
             match = pattern.search(text)
             if match:
                 positions.append(match.start())
         
         return min(positions) if positions else -1
+    
+    def _extract_parts(self, text: str) -> List[Part]:
+        """Extract parts from Constitution text."""
+        parts = []
+        matches = list(self.part_pattern.finditer(text))
+        
+        for i, match in enumerate(matches):
+            part_num = match.group(1)
+            part_heading = match.group(2).strip()
+            
+            # Get content until next part or end
+            start = match.end()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+            content = text[start:end]
+            
+            # Extract articles within this part
+            articles = self._extract_articles(content)
+            
+            part = Part(
+                id=f"part_{part_num.replace('-', '_')}",
+                number=part_num,
+                heading=part_heading if part_heading else None,
+                articles=articles
+            )
+            parts.append(part)
+        
+        return parts
     
     def _extract_chapters(self, text: str) -> List[Chapter]:
         """Extract chapters from text."""

@@ -1,6 +1,7 @@
 """Command-line interface for legal2akn."""
 
 import sys
+import json
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
@@ -12,6 +13,7 @@ from rich.syntax import Syntax
 
 from .converter import AkomaNtosoConverter
 from .parser import DocumentParser
+from .pdf_parser import PDFParser
 from .models import DocumentMetadata, LegalDocument
 
 
@@ -51,11 +53,36 @@ def main(
         legal2akn structured.json -o output.xml --json
     """
     try:
-        # Read input file
-        content = input_file.read_text(encoding='utf-8')
-        
-        if verbose:
-            console.print(f"[blue]Reading file:[/blue] {input_file}")
+        # Check if input is PDF
+        if input_file.suffix.lower() == '.pdf':
+            if verbose:
+                console.print(f"[blue]Processing PDF file:[/blue] {input_file}")
+            
+            pdf_parser = PDFParser()
+            markdown_content, structure_info = pdf_parser.parse_pdf_to_text(input_file)
+            
+            # Clean markdown for text parsing
+            content = pdf_parser.clean_text(markdown_content)
+            
+            if verbose:
+                console.print(f"[green]Extracted text from PDF using pymupdf4llm[/green]")
+                console.print(f"[dim]Found {len(structure_info.get('parts', []))} parts[/dim]")
+                console.print(f"[dim]Found {len(structure_info.get('articles', []))} articles[/dim]")
+                
+                # Show parts found
+                if structure_info.get('parts'):
+                    console.print("\n[bold]Parts detected:[/bold]")
+                    for part in structure_info['parts'][:5]:  # Show first 5
+                        console.print(f"  - Part {part['number']}: {part['title'][:50]}...")
+                    if len(structure_info['parts']) > 5:
+                        console.print(f"  ... and {len(structure_info['parts']) - 5} more")
+        else:
+            # Read text file
+            content = input_file.read_text(encoding='utf-8')
+            structure_info = {}
+            
+            if verbose:
+                console.print(f"[blue]Reading file:[/blue] {input_file}")
         
         # Create metadata
         metadata = DocumentMetadata(
@@ -67,7 +94,6 @@ def main(
         
         # Process document based on input format
         if as_json:
-            import json
             data = json.loads(content)
             document = LegalDocument(**data)
             if verbose:
@@ -109,7 +135,7 @@ def main(
         
         if output:
             output.write_text(xml_string, encoding='utf-8')
-            console.print(f"\n[green]✓[/green] XML saved to: {output}")
+            console.print(f"\n[green]Success:[/green] XML saved to: {output}")
         
     except FileNotFoundError:
         console.print(f"[red]Error:[/red] File not found: {input_file}")

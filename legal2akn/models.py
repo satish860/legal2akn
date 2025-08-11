@@ -46,13 +46,24 @@ class Chapter(BaseModel):
     articles: List[Article] = Field(default_factory=list, description="Articles within the chapter")
 
 
+class Part(BaseModel):
+    """Represents a part in the Indian Constitution."""
+    
+    id: str = Field(..., description="Part identifier")
+    number: str = Field(..., description="Part number (e.g., I, II, XIX-A)")
+    heading: Optional[str] = Field(None, description="Part heading")
+    articles: List[Article] = Field(default_factory=list, description="Articles within the part")
+    chapters: List[Chapter] = Field(default_factory=list, description="Chapters within the part (if any)")
+
+
 class LegalDocument(BaseModel):
     """Represents a complete legal document."""
     
     metadata: DocumentMetadata = Field(..., description="Document metadata")
     preamble: Optional[str] = Field(None, description="Document preamble")
+    parts: List[Part] = Field(default_factory=list, description="Document parts (for Constitution)")
     chapters: List[Chapter] = Field(default_factory=list, description="Document chapters")
-    articles: List[Article] = Field(default_factory=list, description="Top-level articles (if no chapters)")
+    articles: List[Article] = Field(default_factory=list, description="Top-level articles (if no chapters/parts)")
     sections: List[Section] = Field(default_factory=list, description="Top-level sections (if no articles)")
     conclusions: Optional[str] = Field(None, description="Document conclusions")
 

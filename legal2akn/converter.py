@@ -5,7 +5,7 @@ from pathlib import Path
 from lxml import etree
 from datetime import datetime
 
-from .models import LegalDocument, Chapter, Article, Section, DocumentMetadata
+from .models import LegalDocument, Part, Chapter, Article, Section, DocumentMetadata
 
 
 class AkomaNtosoConverter:
@@ -98,7 +98,10 @@ class AkomaNtosoConverter:
             p.text = document.preamble
         
         # Add hierarchical content
-        if document.chapters:
+        if document.parts:
+            for part in document.parts:
+                self._add_part(part)
+        elif document.chapters:
             for chapter in document.chapters:
                 self._add_chapter(chapter)
         elif document.articles:
@@ -114,9 +117,33 @@ class AkomaNtosoConverter:
             p = etree.SubElement(conclusions, "p")
             p.text = document.conclusions
     
+    def _add_part(self, part: Part) -> None:
+        """Add a part element (for Constitution)."""
+        part_elem = etree.SubElement(self.body, "part")
+        part_elem.set("eId", part.id)
+        
+        num = etree.SubElement(part_elem, "num")
+        num.text = f"PART {part.number}"
+        
+        if part.heading:
+            heading = etree.SubElement(part_elem, "heading")
+            heading.text = part.heading
+        
+        # Add articles within this part
+        for article in part.articles:
+            self._add_article(article, part_elem)
+        
+        # Add chapters if any
+        for chapter in part.chapters:
+            self._add_chapter_to_parent(chapter, part_elem)
+    
     def _add_chapter(self, chapter: Chapter) -> None:
         """Add a chapter element."""
-        chapter_elem = etree.SubElement(self.body, "chapter")
+        self._add_chapter_to_parent(chapter, self.body)
+    
+    def _add_chapter_to_parent(self, chapter: Chapter, parent: etree.Element) -> None:
+        """Add a chapter element to a parent element."""
+        chapter_elem = etree.SubElement(parent, "chapter")
         chapter_elem.set("eId", chapter.id)
         
         num = etree.SubElement(chapter_elem, "num")
